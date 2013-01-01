@@ -1,0 +1,1 @@
+WinInet FTP wrapper class in c++.
