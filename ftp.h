@@ -34,30 +34,4 @@ class FTP
 };
 
 
-/*int main()
-{
 
-	HINTERNET hInternet;
-	HINTERNET hFtpSession;
-	hInternet = InternetOpen(NULL,INTERNET_OPEN_TYPE_DIRECT,NULL,NULL,0);
-
-	if (hInternet == NULL) printf ("No internet connection");
-	else  printf ("Internet connection ESTABLISHED\n");
-
-	hFtpSession = InternetConnect(hInternet,L"ftp.drivehq.com",INTERNET_DEFAULT_FTP_PORT, L"tokivena3",L"123w456", INTERNET_SERVICE_FTP, 0,0 );
-
-	if ( !hFtpSession ) printf("Error in the ftp connection\n");
-	else
-	{
-		printf("FTP connection ESTABLISHED\n");
-		if ( !FtpPutFile(hFtpSession, L"C:\\hello.txt", L"hah2a.txt", FTP_TRANSFER_TYPE_BINARY, 0) ) printf ("File transfer fails");
-	   else  printf("The file was transferred\n");
-
-		
-
-	}
-	getchar();
-
-}
-
-*/
