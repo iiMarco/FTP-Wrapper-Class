@@ -2,92 +2,135 @@
 
 FTP::FTP()
 {
-	m_hInternet = InternetOpen(NULL,INTERNET_OPEN_TYPE_DIRECT,NULL,NULL,0);
+	m_hInternet = InternetOpen(NULL,
+                               INTERNET_OPEN_TYPE_DIRECT,
+                               NULL,
+                               NULL,
+                               0);
 	m_connected = false;
 }
 
 FTP::~FTP()
 {
-	InternetCloseHandle(m_hFtpSession);
-	InternetCloseHandle(m_hInternet); 
+    if(m_connected)
+    {
+        InternetCloseHandle(m_hFtpSession);
+        InternetCloseHandle(m_hInternet);
+    }
 }
 
 
-bool FTP::connect(LPCWSTR lpszServerName, LPCWSTR lpszUser, LPCWSTR lpszPassword)
+bool FTP::connect(TSTR lpszServerName, TSTR lpszUser, TSTR lpszPassword)
 {
-	m_hFtpSession = InternetConnect(m_hInternet,lpszServerName,INTERNET_DEFAULT_FTP_PORT, lpszUser,lpszPassword, INTERNET_SERVICE_FTP, 0,0 );
-	if (!m_hFtpSession)    { return false; }
-	m_connected = true;
-	return true;
+	m_hFtpSession = InternetConnect(m_hInternet,
+                                    (LPTSTR)lpszServerName.c_str(),
+                                    INTERNET_DEFAULT_FTP_PORT,
+                                    (LPTSTR)lpszUser.c_str(),
+                                    (LPTSTR)lpszPassword.c_str(),
+                                    INTERNET_SERVICE_FTP,
+                                    0,
+                                    0);
+	if (!m_hFtpSession)
+        return false;
+
+	return (m_connected = true);
 }
 
-bool FTP::upload(LPCWSTR lpszLocation, LPCWSTR lpszRemFile)
+bool FTP::disconnect()
 {
-	if (!m_connected) return false;
+    if(m_connected)
+    {
+        InternetCloseHandle(m_hFtpSession);
+        InternetCloseHandle(m_hInternet);
+        m_connected = false;
+    }
 
-	if (FtpPutFile(m_hFtpSession, lpszLocation, lpszRemFile, FTP_TRANSFER_TYPE_BINARY, 0))
-		{
-			return true;
-		}
-	return false; 
+    return !m_connected;
 }
 
-bool FTP::download(LPCWSTR lpszRemFile, LPCWSTR lpszLocation)
+bool FTP::upload(TSTR lpszLocation, TSTR lpszRemFile)
 {
-	if (!m_connected) return false;
-
-
-	if (FtpGetFile(m_hFtpSession, lpszRemFile, lpszLocation, 0, 0, FTP_TRANSFER_TYPE_BINARY, 0))
-		{
-			return true;
-		}
-	return false; 
+	return !m_connected ? false : FtpPutFile(m_hFtpSession,
+                                             (LPTSTR)lpszLocation.c_str(),
+                                             lpszRemFile.empty() ?
+                                                (LPTSTR)lpszLocation.c_str()
+                                                : (LPTSTR)lpszRemFile.c_str(),
+                                             FTP_TRANSFER_TYPE_BINARY,
+                                             0) == TRUE;
 }
 
-bool FTP::mkdir(LPCWSTR lpszDirectory)
+bool FTP::download(TSTR lpszLocation, TSTR lpszRemFile)
 {
-	if (!FtpCreateDirectory(m_hFtpSession, lpszDirectory)) return false;
-	return true;
+	return !m_connected ?
+        false
+        : FtpGetFile(m_hFtpSession,
+                     (LPTSTR)lpszLocation.c_str(),
+                     lpszRemFile.empty() ?
+                        (LPTSTR)lpszLocation.c_str()
+                        : (LPTSTR)lpszRemFile.c_str(),
+                     0,
+                     0,
+                     FTP_TRANSFER_TYPE_BINARY,
+                     0) == TRUE;
 }
 
-bool FTP::cd(LPCWSTR lpszDirectory)
+bool FTP::mkdir(TSTR lpszDirectory)
 {
-	if (!FtpSetCurrentDirectory(m_hFtpSession, lpszDirectory)) return false;
-	return true;
+	return !m_connected ?
+        false
+        : FtpCreateDirectory(m_hFtpSession,
+                             (LPTSTR)lpszDirectory.c_str()) == TRUE;
 }
 
-bool FTP::remove(LPCWSTR lpszFileName)
+bool FTP::cd(TSTR lpszDirectory)
 {
-	if (!FtpDeleteFile(m_hFtpSession, lpszFileName)) return false;
-	return true;
+	return !m_connected ?
+        false
+        : FtpSetCurrentDirectory(m_hFtpSession,
+                                 (LPTSTR)lpszDirectory.c_str()) == TRUE;
 }
 
-bool FTP::rename(LPCWSTR lpszOldFileName, LPCWSTR lpszNewFileName)
+bool FTP::remove(TSTR lpszFileName)
 {
-	if (!FtpRenameFile(m_hFtpSession, lpszOldFileName, lpszNewFileName)) return false;
-	return true;
+	return !m_connected ?
+        false
+        : FtpDeleteFile(m_hFtpSession,
+                        (LPTSTR)lpszFileName.c_str()) == TRUE;
 }
 
-bool FTP::rmdir(LPCWSTR lpszDirectory)
+bool FTP::rename(TSTR lpszOldFileName, TSTR lpszNewFileName)
 {
-	if(!FtpRemoveDirectory(m_hFtpSession, lpszDirectory)) return false;
-	return true;
+	return !m_connected ?
+        false
+        : FtpRenameFile(m_hFtpSession,
+                        (LPTSTR)lpszOldFileName.c_str(),
+                        (LPTSTR)lpszNewFileName.c_str()) == TRUE;
+}
+
+bool FTP::rmdir(TSTR lpszDirectory)
+{
+	return !m_connected ?
+        false
+        : FtpRemoveDirectory(m_hFtpSession,
+                             (LPTSTR)lpszDirectory.c_str()) == TRUE;
 }
 
 HINTERNET FTP::gethandle()
 {
-	return m_hFtpSession;
+	return m_connected ? m_hFtpSession : NULL;
 }
 
-std::string FTP::getcd()
+TSTR FTP::getcd()
 {
-	LPTSTR lpszCurrentDirectory 	= (LPTSTR)GlobalAlloc(GPTR, MAX_PATH + 1);
-	DWORD lpdwCurrentDirectory = MAX_PATH;
-	std::string strCurrentDirectory;
-	
-	if (!FtpGetCurrentDirectory(m_hFtpSession, lpszCurrentDirectory, &lpdwCurrentDirectory))
+	LPTSTR lpszCurrentDirectory = (LPTSTR)GlobalAlloc(GPTR, MAX_PATH + 1);
+	DWORD lpdwCurrentDirectory  = MAX_PATH;
+	TSTR strCurrentDirectory;
+
+	if (!FtpGetCurrentDirectory(m_hFtpSession,
+                                lpszCurrentDirectory,
+                                &lpdwCurrentDirectory))
 	{
-		strCurrentDirectory = "ERROR-1";
+		strCurrentDirectory = _T("ERROR-1");
 		return strCurrentDirectory;
 	}
 
@@ -101,13 +144,45 @@ std::string FTP::getcd()
 	return strCurrentDirectory;
 }
 
-int FTP::getfilesize(LPCWSTR lpszFileName)
+LONGLONG FTP::getfilesize(TSTR lpszFileName)
 {
-	DWORD dwFileSize;
-	FtpGetFileSize(m_hFtpSession, &dwFileSize);
-	return (int)dwFileSize;
+    if(!m_connected)
+        return INVALID_FILE;
+
+    HINTERNET fHandle = FtpOpenFile(m_hFtpSession,
+                                    (LPTSTR)lpszFileName.c_str(),
+                                    GENERIC_READ,
+                                    INTERNET_FLAG_TRANSFER_BINARY,
+                                    0);
+	LARGE_INTEGER llFileSize;
+	DWORD dwFileSizeLow = INVALID_FILE;
+	DWORD dwFileSizeHigh = INVALID_FILE;
+
+	if(fHandle)
+    {
+        dwFileSizeLow = FtpGetFileSize(fHandle,
+                                       &dwFileSizeHigh);
+
+
+        InternetCloseHandle(fHandle);
+    }
+
+    llFileSize.LowPart = dwFileSizeLow;
+    llFileSize.HighPart = dwFileSizeHigh;
+
+	return llFileSize.QuadPart;
 }
 
-
+bool FTP::command(TSTR lpszCommand)
+{
+    return !m_connected ?
+        false
+        : FtpCommand(m_hFtpSession,
+                     FALSE,
+                     FTP_TRANSFER_TYPE_BINARY,
+                     (LPTSTR)lpszCommand.c_str(),
+                     0,
+                     NULL) == TRUE;
+}
 
 
